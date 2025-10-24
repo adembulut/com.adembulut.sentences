@@ -47,7 +47,7 @@ final class Document {
     var lastUpdatedAt: Date
     var updatedBy: String
     
-    // Type'a göre farklı içerik
+    // Different content based on type
     var sentenceList: [Sentence]?
     var freeText: String?
     

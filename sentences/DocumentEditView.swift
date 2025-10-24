@@ -21,6 +21,7 @@ struct DocumentEditView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isEditing = false
+    @FocusState private var focusedSentenceIndex: Int?
     
     init(document: Document? = nil) {
         self.document = document
@@ -31,14 +32,14 @@ struct DocumentEditView: View {
             Form {
                 Section("Document Info") {
                     TextField("File Name", text: $fileName)
-                        .disabled(isEditing) // Düzenleme modunda dosya adı değiştirilemez
+                        .disabled(isEditing) // File name cannot be changed in edit mode
                     
                     Picker("Type", selection: $selectedType) {
                         ForEach(DocumentType.allCases, id: \.self) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
-                    .disabled(isEditing) // Düzenleme modunda type değiştirilemez
+                    .disabled(isEditing) // Type cannot be changed in edit mode
                 }
                 
                 if selectedType == .items {
@@ -47,10 +48,18 @@ struct DocumentEditView: View {
                             VStack(alignment: .leading) {
                                 TextField("Sentence \(index + 1)", text: $sentences[index].text, axis: .vertical)
                                     .lineLimit(2...6)
+                                    .focused($focusedSentenceIndex, equals: index)
+                                    .onSubmit {
+                                        // Add new sentence when Enter is pressed
+                                        if !sentences[index].text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
+                                            addNewSentence(at: index)
+                                        }
+                                    }
                                 
-                                if !sentences[index].text.isEmpty && index == sentences.count - 1 {
+                                // Show "Add Another" button for each sentence
+                                if !sentences[index].text.isEmpty {
                                     Button("Add Another Sentence") {
-                                        addNewSentence()
+                                        addNewSentence(at: index)
                                     }
                                     .font(.caption)
                                     .foregroundColor(.blue)
@@ -95,7 +104,7 @@ struct DocumentEditView: View {
     
     private func setupInitialState() {
         if let document = document {
-            // Düzenleme modu
+            // Edit mode
             isEditing = true
             fileName = document.fileName
             selectedType = document.type
@@ -109,7 +118,7 @@ struct DocumentEditView: View {
                 freeText = document.freeText ?? ""
             }
         } else {
-            // Yeni doküman modu
+            // New document mode
             isEditing = false
             fileName = generateDefaultFileName()
             sentences = [SentenceItem(text: "", order: 0)]
@@ -121,7 +130,7 @@ struct DocumentEditView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: Date())
         
-        // Aynı gün kaç tane doküman var kontrol et
+        // Check how many documents exist on the same day
         let today = Calendar.current.startOfDay(for: Date())
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
         
@@ -136,14 +145,24 @@ struct DocumentEditView: View {
         return "\(dateString)_\(String(format: "%02d", count))"
     }
     
-    private func addNewSentence() {
-        let newOrder = sentences.count
-        sentences.append(SentenceItem(text: "", order: newOrder))
+    private func addNewSentence(at index: Int) {
+        // Add new sentence above the specified index
+        let newOrder = sentences.isEmpty ? 0 : (sentences.map { $0.order }.max() ?? 0) + 1
+        let newSentence = SentenceItem(text: "", order: newOrder)
+        
+        // Insert at the specified index
+        sentences.insert(newSentence, at: index)
+        
+        // Focus on the newly added sentence
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            focusedSentenceIndex = index
+        }
     }
     
     private func deleteSentence(at offsets: IndexSet) {
         sentences.remove(atOffsets: offsets)
-        // Order'ları yeniden düzenle
+        
+        // Reorder the remaining sentences
         for (index, _) in sentences.enumerated() {
             sentences[index].order = index
         }
@@ -151,25 +170,31 @@ struct DocumentEditView: View {
     
     private func isValidContent() -> Bool {
         if selectedType == .items {
-            return !sentences.isEmpty && sentences.contains { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            // At least one non-empty sentence is required
+            let hasValidSentences = sentences.contains { !$0.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty }
+            return hasValidSentences
         } else {
-            return !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return !freeText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
         }
     }
     
     private func saveDocument() {
-        // Dosya adı validasyonu
+        // File name validation
         if !isValidFileName() {
-            alertMessage = "A document with this name already exists. Please choose a different name."
+            if isEditing {
+                alertMessage = "A document with this name already exists. Please choose a different name."
+            } else {
+                alertMessage = "A document with this name already exists. Please choose a different name."
+            }
             showingAlert = true
             return
         }
         
         if let document = document {
-            // Düzenleme modu
+            // Edit mode
             updateDocument(document)
         } else {
-            // Yeni doküman modu
+            // New document mode
             createNewDocument()
         }
         
@@ -177,36 +202,45 @@ struct DocumentEditView: View {
     }
     
     private func isValidFileName() -> Bool {
-        let predicate = #Predicate<Document> { doc in
-            doc.fileName == fileName
+        // Fetch and filter all documents
+        let request = FetchDescriptor<Document>()
+        let allDocuments = (try? modelContext.fetch(request)) ?? []
+        
+        // Filter documents with the same name
+        let documentsWithSameName = allDocuments.filter { $0.fileName == fileName }
+        
+        if isEditing, let currentDocument = document {
+            // In edit mode: check if there are other documents with the same name (excluding current document)
+            let otherDocumentsWithSameName = documentsWithSameName.filter { $0.id != currentDocument.id }
+            return otherDocumentsWithSameName.isEmpty
         }
         
-        let request = FetchDescriptor<Document>(predicate: predicate)
-        let existingDocuments = (try? modelContext.fetch(request)) ?? []
-        
-        // Eğer düzenleme modundaysak, kendi dokümanımızı hariç tut
-        if isEditing, let document = document {
-            return existingDocuments.allSatisfy { $0.id != document.id }
-        }
-        
-        return existingDocuments.isEmpty
+        // In new document mode: no document with the same name should exist
+        return documentsWithSameName.isEmpty
     }
     
     private func createNewDocument() {
         let newDocument = Document(fileName: fileName, type: selectedType)
         
         if selectedType == .items {
-            newDocument.sentenceList = sentences.compactMap { sentenceItem in
-                guard !sentenceItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-                let sentence = Sentence(text: sentenceItem.text, order: sentenceItem.order)
+            // Filter empty sentences and reorder
+            let filteredSentences: [SentenceItem] = sentences.compactMap { sentenceItem in
+                let trimmedText = sentenceItem.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedText.isEmpty else { return nil }
+                return sentenceItem
+            }
+            
+            // Reorder the sentences
+            newDocument.sentenceList = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
+                let sentence = Sentence(text: sentenceItem.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), order: index)
                 sentence.document = newDocument
                 return sentence
             }
         } else {
-            newDocument.freeText = freeText
+            newDocument.freeText = freeText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         }
         
-        // History kaydı ekle
+        // Add history record
         let history = DocumentHistory(
             documentId: newDocument.id,
             action: .created,
@@ -225,25 +259,13 @@ struct DocumentEditView: View {
         document.updatedBy = "username"
         
         if selectedType == .items {
-            // Mevcut cümleleri sil
-            if let existingSentences = document.sentenceList {
-                for sentence in existingSentences {
-                    modelContext.delete(sentence)
-                }
-            }
-            
-            // Yeni cümleleri ekle
-            document.sentenceList = sentences.compactMap { sentenceItem in
-                guard !sentenceItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-                let sentence = Sentence(text: sentenceItem.text, order: sentenceItem.order)
-                sentence.document = document
-                return sentence
-            }
+            // Smart sentence update strategy
+            updateSentencesForDocument(document)
         } else {
             document.freeText = freeText
         }
         
-        // History kaydı ekle
+        // Add history record
         let newData = getDocumentDataAsJSON(document)
         let history = DocumentHistory(
             documentId: document.id,
@@ -254,6 +276,29 @@ struct DocumentEditView: View {
             newData: newData
         )
         document.history.append(history)
+    }
+    
+    private func updateSentencesForDocument(_ document: Document) {
+        // First filter empty sentences
+        let filteredSentences: [SentenceItem] = sentences.compactMap { sentenceItem in
+            let trimmedText = sentenceItem.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedText.isEmpty else { return nil }
+            return sentenceItem
+        }
+        
+        // Delete existing sentences
+        if let existingSentences = document.sentenceList {
+            for sentence in existingSentences {
+                modelContext.delete(sentence)
+            }
+        }
+        
+        // Add filtered sentences (reorder)
+        document.sentenceList = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
+            let sentence = Sentence(text: sentenceItem.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), order: index)
+            sentence.document = document
+            return sentence
+        }
     }
     
     private func getDocumentDataAsJSON(_ document: Document) -> String {

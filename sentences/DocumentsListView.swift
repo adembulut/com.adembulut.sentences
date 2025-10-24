@@ -71,7 +71,7 @@ struct DocumentsListView: View {
     
     private func deleteDocument(_ document: Document) {
         withAnimation {
-            // History kaydı ekle
+            // Add history record
             let history = DocumentHistory(
                 documentId: document.id,
                 action: .deleted,
