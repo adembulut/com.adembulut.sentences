@@ -13,6 +13,7 @@ struct DocumentEditView: View {
     @Environment(\.dismiss) private var dismiss
     
     let document: Document?
+    private let repository: DocumentRepositoryProtocol
     
     @State private var fileName: String = ""
     @State private var selectedType: DocumentType = .items
@@ -23,8 +24,9 @@ struct DocumentEditView: View {
     @State private var isEditing = false
     @FocusState private var focusedSentenceIndex: Int?
     
-    init(document: Document? = nil) {
+    init(document: Document? = nil, repository: DocumentRepositoryProtocol? = nil) {
         self.document = document
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
     }
     
     var body: some View {
@@ -130,17 +132,8 @@ struct DocumentEditView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: Date())
         
-        // Check how many documents exist on the same day
-        let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-        
-        let predicate = #Predicate<Document> { document in
-            document.createdAt >= today && document.createdAt < tomorrow
-        }
-        
-        let request = FetchDescriptor<Document>(predicate: predicate)
-        let todayDocuments = (try? modelContext.fetch(request)) ?? []
-        
+        // Check how many documents exist on the same day using repository
+        let todayDocuments = repository.fetchDocumentsByDate(Date())
         let count = todayDocuments.count + 1
         return "\(dateString)_\(String(format: "%02d", count))"
     }
@@ -202,21 +195,9 @@ struct DocumentEditView: View {
     }
     
     private func isValidFileName() -> Bool {
-        // Fetch and filter all documents
-        let request = FetchDescriptor<Document>()
-        let allDocuments = (try? modelContext.fetch(request)) ?? []
-        
-        // Filter documents with the same name
-        let documentsWithSameName = allDocuments.filter { $0.fileName == fileName }
-        
-        if isEditing, let currentDocument = document {
-            // In edit mode: check if there are other documents with the same name (excluding current document)
-            let otherDocumentsWithSameName = documentsWithSameName.filter { $0.id != currentDocument.id }
-            return otherDocumentsWithSameName.isEmpty
-        }
-        
-        // In new document mode: no document with the same name should exist
-        return documentsWithSameName.isEmpty
+        // Use repository to check file name uniqueness
+        let documentId = isEditing ? document?.id : nil
+        return repository.isFileNameUnique(fileName, excluding: documentId)
     }
     
     private func createNewDocument() {
@@ -249,7 +230,8 @@ struct DocumentEditView: View {
         )
         newDocument.history.append(history)
         
-        modelContext.insert(newDocument)
+        // Use repository to create document
+        repository.createDocument(newDocument)
     }
     
     private func updateDocument(_ document: Document) {
@@ -276,6 +258,9 @@ struct DocumentEditView: View {
             newData: newData
         )
         document.history.append(history)
+        
+        // Use repository to update document
+        repository.updateDocument(document)
     }
     
     private func updateSentencesForDocument(_ document: Document) {

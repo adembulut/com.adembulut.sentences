@@ -19,7 +19,12 @@ struct sentencesApp: App {
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            
+            // Perform data migration on app launch
+            DataMigrationManager.performMigrationIfNeeded()
+            
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

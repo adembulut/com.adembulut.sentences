@@ -14,6 +14,12 @@ struct DocumentsListView: View {
     @State private var showingNewDocument = false
     @State private var selectedDocument: Document?
     
+    private let repository: DocumentRepositoryProtocol
+    
+    init(repository: DocumentRepositoryProtocol? = nil) {
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+    }
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -61,10 +67,10 @@ struct DocumentsListView: View {
                 }
             }
             .sheet(isPresented: $showingNewDocument) {
-                DocumentEditView()
+                DocumentEditView(repository: repository)
             }
             .sheet(item: $selectedDocument) { document in
-                DocumentEditView(document: document)
+                DocumentEditView(document: document, repository: repository)
             }
         }
     }
@@ -80,7 +86,8 @@ struct DocumentsListView: View {
             )
             modelContext.insert(history)
             
-            modelContext.delete(document)
+            // Use repository to delete document
+            repository.deleteDocument(document)
         }
     }
 }
