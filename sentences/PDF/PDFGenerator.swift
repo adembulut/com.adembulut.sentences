@@ -208,13 +208,18 @@ class PDFShareManager: ObservableObject {
                 return
             }
             
-            // Save PDF to temporary directory
-            let tempDirectory = FileManager.default.temporaryDirectory
+            // Save PDF to Documents directory instead of temp
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let fileName = "\(document.fileName)_\(Date().timeIntervalSince1970).pdf"
-            let pdfURL = tempDirectory.appendingPathComponent(fileName)
+            var pdfURL = documentsDirectory.appendingPathComponent(fileName)
             
             do {
                 try pdfData.write(to: pdfURL)
+                
+                // Set proper file attributes
+                var resourceValues = URLResourceValues()
+                resourceValues.isExcludedFromBackup = true
+                try pdfURL.setResourceValues(resourceValues)
                 
                 DispatchQueue.main.async {
                     self.pdfURL = pdfURL

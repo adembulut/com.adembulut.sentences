@@ -53,7 +53,7 @@ final class Document {
     
     var history: [DocumentHistory]
     
-    init(fileName: String, type: DocumentType, createdBy: String = "username") {
+    init(fileName: String, type: DocumentType, createdBy: String = "adem.bulut") {
         self.id = UUID()
         self.fileName = fileName
         self.type = type

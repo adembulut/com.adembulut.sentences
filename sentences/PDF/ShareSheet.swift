@@ -20,6 +20,14 @@ struct ShareSheet: UIViewControllerRepresentable {
             applicationActivities: applicationActivities
         )
         
+        // Exclude some activities that might cause issues
+        controller.excludedActivityTypes = [
+            .addToReadingList,
+            .assignToContact,
+            .openInIBooks,
+            .markupAsPDF
+        ]
+        
         // Configure for iPad
         if let popover = controller.popoverPresentationController {
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -28,6 +36,13 @@ struct ShareSheet: UIViewControllerRepresentable {
             }
             popover.sourceRect = CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2, width: 0, height: 0)
             popover.permittedArrowDirections = []
+        }
+        
+        // Add completion handler to clean up
+        controller.completionWithItemsHandler = { activityType, completed, returnedItems, error in
+            if let error = error {
+                print("Share error: \(error.localizedDescription)")
+            }
         }
         
         return controller

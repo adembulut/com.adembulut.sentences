@@ -13,7 +13,7 @@ struct DocumentsListView: View {
     @Query(sort: \Document.lastUpdatedAt, order: .reverse) private var documents: [Document]
     @State private var showingNewDocument = false
     @State private var selectedDocument: Document?
-    @StateObject private var pdfShareManager = PDFShareManager()
+    @StateObject private var pdfShareHelper = PDFShareHelper()
     
     private let repository: DocumentRepositoryProtocol
     
@@ -79,12 +79,21 @@ struct DocumentsListView: View {
             .sheet(item: $selectedDocument) { document in
                 DocumentEditView(document: document, repository: repository)
             }
-            .sheet(isPresented: $pdfShareManager.showingShareSheet) {
-                if let pdfURL = pdfShareManager.pdfURL {
-                    ShareSheet(activityItems: [pdfURL])
+            .sheet(isPresented: $pdfShareHelper.showingShareSheet) {
+                if let pdfURL = pdfShareHelper.pdfURL {
+                    EnhancedShareSheet(pdfURL: pdfURL)
                         .onDisappear {
-                            pdfShareManager.cleanup()
+                            pdfShareHelper.cleanup()
                         }
+                }
+            }
+            .alert("PDF Error", isPresented: .constant(pdfShareHelper.errorMessage != nil)) {
+                Button("OK") {
+                    pdfShareHelper.errorMessage = nil
+                }
+            } message: {
+                if let errorMessage = pdfShareHelper.errorMessage {
+                    Text(errorMessage)
                 }
             }
         }
@@ -96,7 +105,7 @@ struct DocumentsListView: View {
             let history = DocumentHistory(
                 documentId: document.id,
                 action: .deleted,
-                changedBy: "username",
+                changedBy: "adem.bulut",
                 changeDescription: "Document deleted"
             )
             modelContext.insert(history)
@@ -107,7 +116,7 @@ struct DocumentsListView: View {
     }
     
     private func shareDocumentAsPDF(_ document: Document) {
-        pdfShareManager.generateAndSharePDF(from: document)
+        pdfShareHelper.generateAndSharePDF(from: document)
     }
 }
 

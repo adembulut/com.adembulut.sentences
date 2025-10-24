@@ -13,7 +13,7 @@ struct DocumentDetailView: View {
     let document: Document
     @State private var showingHistory = false
     @State private var showingEdit = false
-    @StateObject private var pdfShareManager = PDFShareManager()
+    @StateObject private var pdfShareHelper = PDFShareHelper()
     
     var body: some View {
         ScrollView {
@@ -130,16 +130,16 @@ struct DocumentDetailView: View {
                     }
                     
                     // Share PDF Button
-                    Button(action: { pdfShareManager.generateAndSharePDF(from: document) }) {
+                    Button(action: { pdfShareHelper.generateAndSharePDF(from: document) }) {
                         HStack {
-                            if pdfShareManager.isGeneratingPDF {
+                            if pdfShareHelper.isGeneratingPDF {
                                 ProgressView()
                                     .scaleEffect(0.8)
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
                                 Image(systemName: "square.and.arrow.up")
                             }
-                            Text(pdfShareManager.isGeneratingPDF ? "Generating PDF..." : "Share as PDF")
+                            Text(pdfShareHelper.isGeneratingPDF ? "Generating PDF..." : "Share as PDF")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -147,7 +147,7 @@ struct DocumentDetailView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
-                    .disabled(pdfShareManager.isGeneratingPDF)
+                    .disabled(pdfShareHelper.isGeneratingPDF)
                 }
                 
                 Spacer(minLength: 20)
@@ -162,12 +162,21 @@ struct DocumentDetailView: View {
         .sheet(isPresented: $showingHistory) {
             DocumentHistoryView(document: document)
         }
-        .sheet(isPresented: $pdfShareManager.showingShareSheet) {
-            if let pdfURL = pdfShareManager.pdfURL {
-                ShareSheet(activityItems: [pdfURL])
+        .sheet(isPresented: $pdfShareHelper.showingShareSheet) {
+            if let pdfURL = pdfShareHelper.pdfURL {
+                EnhancedShareSheet(pdfURL: pdfURL)
                     .onDisappear {
-                        pdfShareManager.cleanup()
+                        pdfShareHelper.cleanup()
                     }
+            }
+        }
+        .alert("PDF Error", isPresented: .constant(pdfShareHelper.errorMessage != nil)) {
+            Button("OK") {
+                pdfShareHelper.errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = pdfShareHelper.errorMessage {
+                Text(errorMessage)
             }
         }
     }
