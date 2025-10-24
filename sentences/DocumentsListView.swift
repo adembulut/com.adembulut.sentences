@@ -13,6 +13,7 @@ struct DocumentsListView: View {
     @Query(sort: \Document.lastUpdatedAt, order: .reverse) private var documents: [Document]
     @State private var showingNewDocument = false
     @State private var selectedDocument: Document?
+    @StateObject private var pdfShareManager = PDFShareManager()
     
     private let repository: DocumentRepositoryProtocol
     
@@ -54,6 +55,12 @@ struct DocumentsListView: View {
                                 }
                                 .tint(.red)
                             }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button("Share PDF") {
+                                    shareDocumentAsPDF(document)
+                                }
+                                .tint(.green)
+                            }
                         }
                     }
                 }
@@ -72,6 +79,14 @@ struct DocumentsListView: View {
             .sheet(item: $selectedDocument) { document in
                 DocumentEditView(document: document, repository: repository)
             }
+            .sheet(isPresented: $pdfShareManager.showingShareSheet) {
+                if let pdfURL = pdfShareManager.pdfURL {
+                    ShareSheet(activityItems: [pdfURL])
+                        .onDisappear {
+                            pdfShareManager.cleanup()
+                        }
+                }
+            }
         }
     }
     
@@ -89,6 +104,10 @@ struct DocumentsListView: View {
             // Use repository to delete document
             repository.deleteDocument(document)
         }
+    }
+    
+    private func shareDocumentAsPDF(_ document: Document) {
+        pdfShareManager.generateAndSharePDF(from: document)
     }
 }
 

@@ -13,6 +13,7 @@ struct DocumentDetailView: View {
     let document: Document
     @State private var showingHistory = false
     @State private var showingEdit = false
+    @StateObject private var pdfShareManager = PDFShareManager()
     
     var body: some View {
         ScrollView {
@@ -101,30 +102,52 @@ struct DocumentDetailView: View {
                 .cornerRadius(12)
                 
                 // Action buttons
-                HStack(spacing: 16) {
-                    Button(action: { showingEdit = true }) {
-                        HStack {
-                            Image(systemName: "pencil")
-                            Text("Edit")
+                VStack(spacing: 12) {
+                    HStack(spacing: 16) {
+                        Button(action: { showingEdit = true }) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                Text("Edit")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                        
+                        Button(action: { showingHistory = true }) {
+                            HStack {
+                                Image(systemName: "clock")
+                                Text("History")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.gray)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
                     }
                     
-                    Button(action: { showingHistory = true }) {
+                    // Share PDF Button
+                    Button(action: { pdfShareManager.generateAndSharePDF(from: document) }) {
                         HStack {
-                            Image(systemName: "clock")
-                            Text("History")
+                            if pdfShareManager.isGeneratingPDF {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            Text(pdfShareManager.isGeneratingPDF ? "Generating PDF..." : "Share as PDF")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.gray)
+                        .background(Color.green)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
+                    .disabled(pdfShareManager.isGeneratingPDF)
                 }
                 
                 Spacer(minLength: 20)
@@ -138,6 +161,14 @@ struct DocumentDetailView: View {
         }
         .sheet(isPresented: $showingHistory) {
             DocumentHistoryView(document: document)
+        }
+        .sheet(isPresented: $pdfShareManager.showingShareSheet) {
+            if let pdfURL = pdfShareManager.pdfURL {
+                ShareSheet(activityItems: [pdfURL])
+                    .onDisappear {
+                        pdfShareManager.cleanup()
+                    }
+            }
         }
     }
 }
