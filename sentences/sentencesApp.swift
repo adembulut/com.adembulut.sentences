@@ -12,7 +12,9 @@ import SwiftData
 struct sentencesApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Document.self,
+            Sentence.self,
+            DocumentHistory.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
