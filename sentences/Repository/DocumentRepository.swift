@@ -68,6 +68,11 @@ class DocumentRepository: DocumentRepositoryProtocol {
     // MARK: - Delete Operations
     func deleteDocument(_ document: Document) {
         modelContext.delete(document)
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete document: \(error)")
+        }
     }
     
     // MARK: - Validation Operations

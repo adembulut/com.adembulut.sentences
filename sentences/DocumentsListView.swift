@@ -41,26 +41,28 @@ struct DocumentsListView: View {
                 } else {
                     List {
                         ForEach(documents) { document in
-                            NavigationLink(destination: DocumentDetailView(document: document)) {
-                                DocumentRowView(document: document)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button("Edit") {
+                            DocumentRowView(document: document)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
                                     selectedDocument = document
                                 }
-                                .tint(.blue)
-                                
-                                Button("Delete") {
-                                    deleteDocument(document)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button("Edit") {
+                                        selectedDocument = document
+                                    }
+                                    .tint(.blue)
+                                    
+                                    Button("Delete") {
+                                        deleteDocument(document)
+                                    }
+                                    .tint(.red)
                                 }
-                                .tint(.red)
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button("Share PDF") {
-                                    shareDocumentAsPDF(document)
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button("Share PDF") {
+                                        shareDocumentAsPDF(document)
+                                    }
+                                    .tint(.green)
                                 }
-                                .tint(.green)
-                            }
                         }
                     }
                 }
@@ -77,7 +79,9 @@ struct DocumentsListView: View {
                 DocumentEditView(repository: repository)
             }
             .sheet(item: $selectedDocument) { document in
-                DocumentEditView(document: document, repository: repository)
+                NavigationView {
+                    DocumentDetailView(document: document)
+                }
             }
             .sheet(isPresented: $pdfShareHelper.showingShareSheet) {
                 if let pdfURL = pdfShareHelper.pdfURL {
@@ -100,18 +104,20 @@ struct DocumentsListView: View {
     }
     
     private func deleteDocument(_ document: Document) {
+        print("🗑️ Delete button tapped for document: \(document.fileName)")
+        
         withAnimation {
-            // Add history record
-            let history = DocumentHistory(
-                documentId: document.id,
-                action: .deleted,
-                changedBy: "adem.bulut",
-                changeDescription: "Document deleted"
-            )
-            modelContext.insert(history)
+            // Delete document directly from modelContext
+            modelContext.delete(document)
+            print("🗑️ Document deleted from context")
             
-            // Use repository to delete document
-            repository.deleteDocument(document)
+            // Save the context to persist changes
+            do {
+                try modelContext.save()
+                print("✅ Context saved successfully")
+            } catch {
+                print("❌ Failed to save after delete: \(error)")
+            }
         }
     }
     
