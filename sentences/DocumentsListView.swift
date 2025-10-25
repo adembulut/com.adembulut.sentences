@@ -9,7 +9,6 @@ import SwiftUI
 import SwiftData
 
 struct DocumentsListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Document.lastUpdatedAt, order: .reverse) private var documents: [Document]
     @State private var showingNewDocument = false
     @State private var selectedDocument: Document?
@@ -107,17 +106,9 @@ struct DocumentsListView: View {
         print("🗑️ Delete button tapped for document: \(document.fileName)")
         
         withAnimation {
-            // Delete document directly from modelContext
-            modelContext.delete(document)
-            print("🗑️ Document deleted from context")
-            
-            // Save the context to persist changes
-            do {
-                try modelContext.save()
-                print("✅ Context saved successfully")
-            } catch {
-                print("❌ Failed to save after delete: \(error)")
-            }
+            // Use repository to delete document
+            repository.deleteDocument(document)
+            print("🗑️ Document deleted via repository")
         }
     }
     
