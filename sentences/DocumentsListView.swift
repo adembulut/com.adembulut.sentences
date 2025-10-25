@@ -82,7 +82,7 @@ struct DocumentsListView: View {
             }
             .sheet(item: $selectedDocument) { document in
                 NavigationView {
-                    DocumentDetailView(document: document)
+                    DocumentDetailView(document: document, repository: repository)
                 }
             }
             .sheet(isPresented: $pdfShareHelper.showingShareSheet) {

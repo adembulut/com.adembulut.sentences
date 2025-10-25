@@ -9,11 +9,16 @@ import SwiftUI
 import SwiftData
 
 struct DocumentDetailView: View {
-    @Environment(\.modelContext) private var modelContext
     let document: Document
+    private let repository: DocumentRepositoryProtocol
     @State private var showingHistory = false
     @State private var showingEdit = false
     @StateObject private var pdfShareHelper = PDFShareHelper()
+    
+    init(document: Document, repository: DocumentRepositoryProtocol? = nil) {
+        self.document = document
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+    }
     
     var body: some View {
         ScrollView {
@@ -157,7 +162,7 @@ struct DocumentDetailView: View {
         .navigationTitle("Document Details")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingEdit) {
-            DocumentEditView(document: document)
+            DocumentEditView(document: document, repository: repository)
         }
         .sheet(isPresented: $showingHistory) {
             DocumentHistoryView(document: document)
