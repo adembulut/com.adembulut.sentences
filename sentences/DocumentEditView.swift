@@ -9,7 +9,6 @@ import SwiftUI
 import SwiftData
 
 struct DocumentEditView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
     let document: Document?
@@ -225,7 +224,7 @@ struct DocumentEditView: View {
         let history = DocumentHistory(
             documentId: newDocument.id,
             action: .created,
-            changedBy: "username",
+            changedBy: "adem.bulut",
             changeDescription: "Document created"
         )
         newDocument.history.append(history)
@@ -238,7 +237,7 @@ struct DocumentEditView: View {
         let previousData = getDocumentDataAsJSON(document)
         
         document.lastUpdatedAt = Date()
-        document.updatedBy = "username"
+        document.updatedBy = "adem.bulut"
         
         if selectedType == .items {
             // Smart sentence update strategy
@@ -252,7 +251,7 @@ struct DocumentEditView: View {
         let history = DocumentHistory(
             documentId: document.id,
             action: .updated,
-            changedBy: "username",
+            changedBy: "adem.bulut",
             changeDescription: "Document updated",
             previousData: previousData,
             newData: newData
@@ -271,12 +270,8 @@ struct DocumentEditView: View {
             return sentenceItem
         }
         
-        // Delete existing sentences
-        if let existingSentences = document.sentenceList {
-            for sentence in existingSentences {
-                modelContext.delete(sentence)
-            }
-        }
+        // Clear existing sentences (they will be replaced by new ones)
+        document.sentenceList?.removeAll()
         
         // Add filtered sentences (reorder)
         document.sentenceList = filteredSentences.enumerated().compactMap { (index, sentenceItem) in

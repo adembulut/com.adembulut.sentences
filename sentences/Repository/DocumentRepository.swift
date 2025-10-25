@@ -57,6 +57,7 @@ class DocumentRepository: DocumentRepositoryProtocol {
     // MARK: - Create Operations
     func createDocument(_ document: Document) {
         modelContext.insert(document)
+        try? modelContext.save()
     }
     
     // MARK: - Update Operations
