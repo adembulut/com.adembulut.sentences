@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct DocumentsListView: View {
-    @Query(sort: \Document.lastUpdatedAt, order: .reverse) private var documents: [Document]
+    @State private var documents: [Document] = []
     @State private var showingNewDocument = false
     @State private var selectedDocument: Document?
     @StateObject private var pdfShareHelper = PDFShareHelper()
@@ -75,7 +75,10 @@ struct DocumentsListView: View {
                 }
             }
             .sheet(isPresented: $showingNewDocument) {
-                DocumentEditView(repository: repository)
+                DocumentEditView(repository: repository) {
+                    // Callback when document is saved - reload the list
+                    loadDocuments()
+                }
             }
             .sheet(item: $selectedDocument) { document in
                 NavigationView {
@@ -99,15 +102,23 @@ struct DocumentsListView: View {
                     Text(errorMessage)
                 }
             }
+            .onAppear {
+                loadDocuments()
+            }
         }
+    }
+    
+    private func loadDocuments() {
+        documents = repository.fetchAllDocuments()
     }
     
     private func deleteDocument(_ document: Document) {
         print("🗑️ Delete button tapped for document: \(document.fileName)")
         
         withAnimation {
-            // Use repository to delete document
             repository.deleteDocument(document)
+            // Remove from local array to update UI immediately
+            documents.removeAll { $0.id == document.id }
             print("🗑️ Document deleted via repository")
         }
     }

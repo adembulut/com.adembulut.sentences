@@ -13,6 +13,7 @@ struct DocumentEditView: View {
     
     let document: Document?
     private let repository: DocumentRepositoryProtocol
+    private let onDocumentSaved: (() -> Void)?
     
     @State private var fileName: String = ""
     @State private var selectedType: DocumentType = .items
@@ -23,9 +24,10 @@ struct DocumentEditView: View {
     @State private var isEditing = false
     @FocusState private var focusedSentenceIndex: Int?
     
-    init(document: Document? = nil, repository: DocumentRepositoryProtocol? = nil) {
+    init(document: Document? = nil, repository: DocumentRepositoryProtocol? = nil, onDocumentSaved: (() -> Void)? = nil) {
         self.document = document
         self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+        self.onDocumentSaved = onDocumentSaved
     }
     
     var body: some View {
@@ -189,6 +191,9 @@ struct DocumentEditView: View {
             // New document mode
             createNewDocument()
         }
+        
+        // Call callback to refresh the list
+        onDocumentSaved?()
         
         dismiss()
     }
