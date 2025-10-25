@@ -73,6 +73,7 @@ struct DocumentDetailView: View {
                                         
                                         Text(sentence.text)
                                             .font(.body)
+                                            .textSelection(.enabled)
                                         
                                         Spacer()
                                     }
@@ -93,6 +94,7 @@ struct DocumentDetailView: View {
                             if let freeText = document.freeText, !freeText.isEmpty {
                                 Text(freeText)
                                     .font(.body)
+                                    .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             } else {
                                 Text("No content added yet")
