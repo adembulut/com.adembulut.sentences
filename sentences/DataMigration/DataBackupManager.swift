@@ -58,7 +58,7 @@ class DataBackupManager {
                 return date1 ?? Date.distantPast < date2 ?? Date.distantPast
             }) {
                 let data = try Data(contentsOf: latestBackup)
-                let json = try JSONSerialization.jsonObject(with: data, options: [])
+                _ = try JSONSerialization.jsonObject(with: data, options: [])
                 print("✅ Restored from: \(latestBackup.lastPathComponent)")
                 return true
             } else {

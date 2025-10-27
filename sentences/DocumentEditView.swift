@@ -230,8 +230,6 @@ struct DocumentEditView: View {
     }
     
     private func updateDocument(_ document: Document) {
-        let previousData = getDocumentDataAsJSON(document)
-        
         document.lastUpdatedAt = Date()
         document.updatedBy = "adem.bulut"
         
