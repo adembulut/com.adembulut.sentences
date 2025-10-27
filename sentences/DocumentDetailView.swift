@@ -14,10 +14,25 @@ struct DocumentDetailView: View {
     @State private var showingHistory = false
     @State private var showingEdit = false
     @StateObject private var pdfShareHelper = PDFShareHelper()
+    @State private var searchText = ""
     
     init(document: Document, repository: DocumentRepositoryProtocol? = nil) {
         self.document = document
         self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+    }
+    
+    // Filter sentences based on search text
+    private var filteredSentences: [Sentence] {
+        guard let sentences = document.sentenceList else { return [] }
+        
+        if searchText.isEmpty {
+            return sentences.sorted(by: { $0.createdAt > $1.createdAt })
+        }
+        
+        let lowercasedSearch = searchText.lowercased()
+        return sentences.filter { sentence in
+            sentence.text.lowercased().contains(lowercasedSearch)
+        }.sorted(by: { $0.createdAt > $1.createdAt })
     }
     
     var body: some View {
@@ -55,6 +70,12 @@ struct DocumentDetailView: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
                 
+                // Search bar (only for items type)
+                if document.type == .items {
+                    SearchTextField(text: $searchText, placeholder: "Search sentences...")
+                        .padding(.horizontal)
+                }
+                
                 // Content
                 VStack(alignment: .leading, spacing: 16) {
                     if document.type == .items {
@@ -63,10 +84,10 @@ struct DocumentDetailView: View {
                             Text("Sentences")
                                 .font(.headline)
                             
-                            if let sentences = document.sentenceList, !sentences.isEmpty {
-                                ForEach(sentences.sorted(by: { $0.order < $1.order }), id: \.id) { sentence in
+                            if !filteredSentences.isEmpty {
+                                ForEach(Array(filteredSentences.enumerated()), id: \.element.id) { index, sentence in
                                     HStack(alignment: .top) {
-                                        Text("\(sentence.order + 1).")
+                                        Text("\(index + 1).")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .frame(width: 20, alignment: .leading)
@@ -79,7 +100,11 @@ struct DocumentDetailView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
-                            } else {
+                            } else if !searchText.isEmpty {
+                                Text("No sentences found")
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            } else if document.sentenceList?.isEmpty ?? true {
                                 Text("No sentences added yet")
                                     .foregroundColor(.secondary)
                                     .italic()
