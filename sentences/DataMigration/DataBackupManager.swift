@@ -145,7 +145,6 @@ extension DataBackupManager {
         let stats = [
             "totalDocuments": 0,
             "totalSentences": 0,
-            "totalHistoryEntries": 0,
             "lastBackup": Date().timeIntervalSince1970
         ]
         

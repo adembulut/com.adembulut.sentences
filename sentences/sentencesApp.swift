@@ -14,7 +14,6 @@ struct sentencesApp: App {
         let schema = Schema([
             Document.self,
             Sentence.self,
-            DocumentHistory.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

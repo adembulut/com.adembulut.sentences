@@ -17,7 +17,7 @@ struct DocumentsListView: View {
     private let repository: DocumentRepositoryProtocol
     
     init(repository: DocumentRepositoryProtocol? = nil) {
-        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self)))
     }
     
     var body: some View {

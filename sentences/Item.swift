@@ -21,21 +21,6 @@ enum DocumentType: String, CaseIterable, Codable {
     }
 }
 
-// MARK: - History Actions
-enum HistoryAction: String, CaseIterable, Codable {
-    case created = "created"
-    case updated = "updated"
-    case deleted = "deleted"
-    
-    var displayName: String {
-        switch self {
-        case .created: return "Created"
-        case .updated: return "Updated"
-        case .deleted: return "Deleted"
-        }
-    }
-}
-
 // MARK: - Document Model
 @Model
 final class Document {
@@ -51,8 +36,6 @@ final class Document {
     var sentenceList: [Sentence]?
     var freeText: String?
     
-    var history: [DocumentHistory]
-    
     init(fileName: String, type: DocumentType, createdBy: String = "adem.bulut") {
         self.id = UUID()
         self.fileName = fileName
@@ -61,7 +44,6 @@ final class Document {
         self.createdBy = createdBy
         self.lastUpdatedAt = Date()
         self.updatedBy = createdBy
-        self.history = []
         
         if type == .items {
             self.sentenceList = []
@@ -88,27 +70,3 @@ final class Sentence {
     }
 }
 
-// MARK: - Document History Model
-@Model
-final class DocumentHistory {
-    var id: UUID
-    var documentId: UUID
-    var action: HistoryAction
-    var changedAt: Date
-    var changedBy: String
-    var previousData: String?
-    var newData: String?
-    var changeDescription: String
-    var document: Document?
-    
-    init(documentId: UUID, action: HistoryAction, changedBy: String, changeDescription: String, previousData: String? = nil, newData: String? = nil) {
-        self.id = UUID()
-        self.documentId = documentId
-        self.action = action
-        self.changedAt = Date()
-        self.changedBy = changedBy
-        self.changeDescription = changeDescription
-        self.previousData = previousData
-        self.newData = newData
-    }
-}

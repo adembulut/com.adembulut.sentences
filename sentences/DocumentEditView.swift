@@ -26,7 +26,7 @@ struct DocumentEditView: View {
     
     init(document: Document? = nil, repository: DocumentRepositoryProtocol? = nil, onDocumentSaved: (() -> Void)? = nil) {
         self.document = document
-        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self)))
         self.onDocumentSaved = onDocumentSaved
     }
     
@@ -225,15 +225,6 @@ struct DocumentEditView: View {
             newDocument.freeText = freeText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         }
         
-        // Add history record
-        let history = DocumentHistory(
-            documentId: newDocument.id,
-            action: .created,
-            changedBy: "adem.bulut",
-            changeDescription: "Document created"
-        )
-        newDocument.history.append(history)
-        
         // Use repository to create document
         repository.createDocument(newDocument)
     }
@@ -250,18 +241,6 @@ struct DocumentEditView: View {
         } else {
             document.freeText = freeText
         }
-        
-        // Add history record
-        let newData = getDocumentDataAsJSON(document)
-        let history = DocumentHistory(
-            documentId: document.id,
-            action: .updated,
-            changedBy: "adem.bulut",
-            changeDescription: "Document updated",
-            previousData: previousData,
-            newData: newData
-        )
-        document.history.append(history)
         
         // Use repository to update document
         repository.updateDocument(document)

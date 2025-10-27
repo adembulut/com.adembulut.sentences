@@ -11,14 +11,13 @@ import SwiftData
 struct DocumentDetailView: View {
     let document: Document
     private let repository: DocumentRepositoryProtocol
-    @State private var showingHistory = false
     @State private var showingEdit = false
     @StateObject private var pdfShareHelper = PDFShareHelper()
     @State private var searchText = ""
     
     init(document: Document, repository: DocumentRepositoryProtocol? = nil) {
         self.document = document
-        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self, DocumentHistory.self)))
+        self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self)))
     }
     
     // Filter sentences based on search text
@@ -135,30 +134,16 @@ struct DocumentDetailView: View {
                 
                 // Action buttons
                 VStack(spacing: 12) {
-                    HStack(spacing: 16) {
-                        Button(action: { showingEdit = true }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                Text("Edit")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                    Button(action: { showingEdit = true }) {
+                        HStack {
+                            Image(systemName: "pencil")
+                            Text("Edit")
                         }
-                        
-                        Button(action: { showingHistory = true }) {
-                            HStack {
-                                Image(systemName: "clock")
-                                Text("History")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                     }
                     
                     // Share PDF Button
@@ -190,9 +175,6 @@ struct DocumentDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingEdit) {
             DocumentEditView(document: document, repository: repository)
-        }
-        .sheet(isPresented: $showingHistory) {
-            DocumentHistoryView(document: document)
         }
         .sheet(isPresented: $pdfShareHelper.showingShareSheet) {
             if let pdfURL = pdfShareHelper.pdfURL {
