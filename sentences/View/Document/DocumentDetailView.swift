@@ -22,7 +22,7 @@ struct DocumentDetailView: View {
     
     // Filter sentences based on search text
     private var filteredSentences: [Sentence] {
-        guard let sentences = document.sentenceList else { return [] }
+        let sentences = document.sentences
         
         if searchText.isEmpty {
             return sentences.sorted(by: { $0.createdAt > $1.createdAt })
@@ -103,7 +103,7 @@ struct DocumentDetailView: View {
                                 Text("No sentences found")
                                     .foregroundColor(.secondary)
                                     .italic()
-                            } else if document.sentenceList?.isEmpty ?? true {
+                            } else if document.sentences.isEmpty {
                                 Text("No sentences added yet")
                                     .foregroundColor(.secondary)
                                     .italic()

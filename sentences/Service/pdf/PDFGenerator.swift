@@ -93,7 +93,8 @@ class PDFGenerator {
     
     // MARK: - Add Sentences Content
     private static func addSentencesContent(to context: UIGraphicsPDFRendererContext, document: Document, startY: inout CGFloat, leftMargin: CGFloat, contentWidth: CGFloat, pageRect: CGRect, headerFont: UIFont, bodyFont: UIFont) {
-        guard let sentences = document.sentenceList, !sentences.isEmpty else {
+        let sentences = document.sentences
+        guard !sentences.isEmpty else {
             addEmptyContentMessage(to: context, startY: &startY, leftMargin: leftMargin, contentWidth: contentWidth, pageRect: pageRect, headerFont: headerFont, bodyFont: bodyFont)
             return
         }

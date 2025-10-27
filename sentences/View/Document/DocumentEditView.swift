@@ -113,7 +113,7 @@ struct DocumentEditView: View {
             selectedType = document.type
             
             if document.type == .items {
-                sentences = document.sentenceList?.map { SentenceItem(text: $0.text, order: $0.order) } ?? []
+                sentences = document.sentences.map { SentenceItem(text: $0.text, order: $0.order) }
                 if sentences.isEmpty {
                     sentences = [SentenceItem(text: "", order: 0)]
                 }
@@ -216,7 +216,7 @@ struct DocumentEditView: View {
             }
             
             // Reorder the sentences
-            newDocument.sentenceList = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
+            newDocument.sentences = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
                 let sentence = Sentence(text: sentenceItem.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), order: index)
                 sentence.document = newDocument
                 return sentence
@@ -253,10 +253,10 @@ struct DocumentEditView: View {
         }
         
         // Clear existing sentences (they will be replaced by new ones)
-        document.sentenceList?.removeAll()
+        document.sentences.removeAll()
         
         // Add filtered sentences (reorder)
-        document.sentenceList = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
+        document.sentences = filteredSentences.enumerated().compactMap { (index, sentenceItem) in
             let sentence = Sentence(text: sentenceItem.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), order: index)
             sentence.document = document
             return sentence
@@ -267,7 +267,7 @@ struct DocumentEditView: View {
         let data: [String: Any] = [
             "type": document.type.rawValue,
             "freeText": document.freeText ?? "",
-            "sentenceCount": document.sentenceList?.count ?? 0
+            "sentenceCount": document.sentences.count
         ]
         
         if let jsonData = try? JSONSerialization.data(withJSONObject: data),
