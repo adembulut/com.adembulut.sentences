@@ -30,7 +30,8 @@ class DocumentRepository: DocumentRepositoryProtocol {
     // MARK: - Fetch Operations
     func fetchAllDocuments() -> [Document] {
         let request = FetchDescriptor<Document>()
-        return (try? modelContext.fetch(request)) ?? []
+        let docs = (try? modelContext.fetch(request)) ?? []
+        return docs.sorted(by: { $0.createdAt > $1.createdAt })
     }
     
     func fetchDocumentsByDate(_ date: Date) -> [Document] {
