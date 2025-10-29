@@ -22,12 +22,54 @@ struct DocumentEditView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isEditing = false
+    @State private var showingUnsavedChangesAlert = false
     @FocusState private var focusedSentenceIndex: Int?
+    
+    // Original values to track changes
+    @State private var originalFileName: String = ""
+    @State private var originalType: DocumentType = .items
+    @State private var originalFreeText: String = ""
+    @State private var originalSentences: [SentenceItem] = []
     
     init(document: Document? = nil, repository: DocumentRepositoryProtocol? = nil, onDocumentSaved: (() -> Void)? = nil) {
         self.document = document
         self.repository = repository ?? DocumentRepository(modelContext: ModelContext(try! ModelContainer(for: Document.self, Sentence.self)))
         self.onDocumentSaved = onDocumentSaved
+    }
+    
+    // Computed property to check if there are unsaved changes
+    private var hasUnsavedChanges: Bool {
+        if isEditing {
+            // Edit mode: compare with original values
+            if fileName != originalFileName { return true }
+            if selectedType != originalType { return true }
+            if selectedType == .items {
+                let currentSentences = sentences.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                let originalSentencesFiltered = originalSentences.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                
+                if currentSentences.count != originalSentencesFiltered.count { return true }
+                
+                for (index, sentence) in currentSentences.enumerated() {
+                    if index >= originalSentencesFiltered.count || 
+                       sentence.text.trimmingCharacters(in: .whitespacesAndNewlines) != originalSentencesFiltered[index].text.trimmingCharacters(in: .whitespacesAndNewlines) {
+                        return true
+                    }
+                }
+            } else {
+                if freeText.trimmingCharacters(in: .whitespacesAndNewlines) != originalFreeText.trimmingCharacters(in: .whitespacesAndNewlines) {
+                    return true
+                }
+            }
+        } else {
+            // New document mode: check if there's any content
+            if selectedType == .items {
+                let hasValidSentences = sentences.contains { !$0.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty }
+                return hasValidSentences
+            } else {
+                return !freeText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
+            }
+        }
+        return false
     }
     
     var body: some View {
@@ -83,7 +125,11 @@ struct DocumentEditView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        dismiss()
+                        if hasUnsavedChanges {
+                            showingUnsavedChangesAlert = true
+                        } else {
+                            dismiss()
+                        }
                     }
                 }
                 
@@ -99,10 +145,52 @@ struct DocumentEditView: View {
             } message: {
                 Text(alertMessage)
             }
+            .confirmationDialog(
+                "Kaydedilmemiş Değişiklikler",
+                isPresented: $showingUnsavedChangesAlert,
+                titleVisibility: .visible
+            ) {
+                Button("Kaydet ve Çık", role: .none) {
+                    if isValidFileName() && isValidContent() {
+                        saveDocument()
+                    } else {
+                        showingAlert = true
+                        alertMessage = fileName.isEmpty ? "Dosya adı boş olamaz." : "Geçerli içerik gerekli."
+                    }
+                }
+                Button("Kaydetmeden Çık", role: .destructive) {
+                    dismiss()
+                }
+                Button("İptal", role: .cancel) { }
+            } message: {
+                Text("Kaydedilmemiş değişiklikler var. Kaydedilsin mi?")
+            }
             .onAppear {
                 setupInitialState()
             }
+            .overlay(
+                // Overlay to catch dismiss gestures from top area
+                VStack {
+                    // Top area to catch swipe-down gesture
+                    Color.clear
+                        .frame(maxHeight: 200)
+                        .contentShape(Rectangle())
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 80, coordinateSpace: .local)
+                                .onEnded { value in
+                                    // Detect significant swipe down gesture (dismiss attempt)
+                                    if value.translation.height > 150 && abs(value.translation.width) < abs(value.translation.height) {
+                                        if hasUnsavedChanges {
+                                            showingUnsavedChangesAlert = true
+                                        }
+                                    }
+                                }
+                        )
+                    Spacer()
+                }
+            )
         }
+        .interactiveDismissDisabled(hasUnsavedChanges)
     }
     
     private func setupInitialState() {
@@ -112,19 +200,31 @@ struct DocumentEditView: View {
             fileName = document.fileName
             selectedType = document.type
             
+            // Save original values
+            originalFileName = document.fileName
+            originalType = document.type
+            
             if document.type == .items {
                 sentences = document.sentences.map { SentenceItem(text: $0.text, order: $0.order) }
                 if sentences.isEmpty {
                     sentences = [SentenceItem(text: "", order: 0)]
                 }
+                // Save original sentences
+                originalSentences = sentences.map { SentenceItem(text: $0.text, order: $0.order) }
             } else {
                 freeText = document.freeText ?? ""
+                originalFreeText = document.freeText ?? ""
             }
         } else {
             // New document mode
             isEditing = false
             fileName = generateDefaultFileName()
             sentences = [SentenceItem(text: "", order: 0)]
+            // Initialize original values as empty for new documents
+            originalFileName = fileName
+            originalType = .items
+            originalFreeText = ""
+            originalSentences = []
         }
     }
     
@@ -191,6 +291,12 @@ struct DocumentEditView: View {
             // New document mode
             createNewDocument()
         }
+        
+        // Update original values after successful save
+        originalFileName = fileName
+        originalType = selectedType
+        originalFreeText = selectedType == .items ? "" : freeText
+        originalSentences = selectedType == .items ? sentences.map { SentenceItem(text: $0.text, order: $0.order) } : []
         
         // Call callback to refresh the list
         onDocumentSaved?()
