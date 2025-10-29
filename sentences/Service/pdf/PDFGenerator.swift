@@ -198,6 +198,35 @@ class PDFShareManager: ObservableObject {
     @Published var showingShareSheet = false
     @Published var pdfURL: URL?
     
+    // MARK: - Sanitize File Name
+    private func sanitizeFileName(_ fileName: String) -> String {
+        // Characters not allowed in file names: / : < > " | ? * and control characters
+        let invalidChars = CharacterSet(charactersIn: "/<>:\"|?*").union(.controlCharacters)
+        
+        // Replace invalid characters with underscore
+        var sanitized = fileName
+            .components(separatedBy: invalidChars)
+            .joined(separator: "_")
+        
+        // Remove leading/trailing spaces and replace multiple spaces/underscores with single underscore
+        sanitized = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: "_", options: .regularExpression)
+            .replacingOccurrences(of: "_+", with: "_", options: .regularExpression)
+        
+        // Ensure file name is not empty
+        if sanitized.isEmpty {
+            sanitized = "document"
+        }
+        
+        // Limit length to 200 characters to avoid filesystem issues
+        if sanitized.count > 200 {
+            let index = sanitized.index(sanitized.startIndex, offsetBy: 200)
+            sanitized = String(sanitized[..<index])
+        }
+        
+        return sanitized
+    }
+    
     func generateAndSharePDF(from document: Document) {
         isGeneratingPDF = true
         
@@ -211,7 +240,8 @@ class PDFShareManager: ObservableObject {
             
             // Save PDF to Documents directory instead of temp
             let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            let fileName = "\(document.fileName)_\(Date().timeIntervalSince1970).pdf"
+            let sanitizedFileName = self.sanitizeFileName(document.fileName)
+            let fileName = "\(sanitizedFileName)_\(Date().timeIntervalSince1970).pdf"
             var pdfURL = documentsDirectory.appendingPathComponent(fileName)
             
             do {
