@@ -77,7 +77,6 @@ struct DocumentEditView: View {
             Form {
                 Section("Document Info") {
                     TextField("File Name", text: $fileName)
-                        .disabled(isEditing) // File name cannot be changed in edit mode
                     
                     Picker("Type", selection: $selectedType) {
                         ForEach(DocumentType.allCases, id: \.self) { type in
@@ -168,27 +167,6 @@ struct DocumentEditView: View {
             .onAppear {
                 setupInitialState()
             }
-            .overlay(
-                // Overlay to catch dismiss gestures from top area
-                VStack {
-                    // Top area to catch swipe-down gesture
-                    Color.clear
-                        .frame(maxHeight: 200)
-                        .contentShape(Rectangle())
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 80, coordinateSpace: .local)
-                                .onEnded { value in
-                                    // Detect significant swipe down gesture (dismiss attempt)
-                                    if value.translation.height > 150 && abs(value.translation.width) < abs(value.translation.height) {
-                                        if hasUnsavedChanges {
-                                            showingUnsavedChangesAlert = true
-                                        }
-                                    }
-                                }
-                        )
-                    Spacer()
-                }
-            )
         }
         .interactiveDismissDisabled(hasUnsavedChanges)
     }
@@ -336,6 +314,7 @@ struct DocumentEditView: View {
     }
     
     private func updateDocument(_ document: Document) {
+        document.fileName = fileName
         document.lastUpdatedAt = Date()
         document.updatedBy = "adem.bulut"
         
